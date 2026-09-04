@@ -149,10 +149,28 @@ button{width:100%;border:0;border-radius:16px;background:#302c32;color:#fff;padd
 </section>
 </div>
 
-<script type="module">
-import { calculateFourPillars } from "https://cdn.jsdelivr.net/npm/manseryeok@2.0.0/+esm";
+<script>
+let calculateFourPillars=null;
 
 const G=["갑","을","병","정","무","기","경","신","임","계"],Z=["자","축","인","묘","진","사","오","미","신","유","술","해"];
+function fallbackFourPillars(y,m,d,h,min){
+  // Common calendar approximation fallback. The exact engine is attempted first when available.
+  const ref=new Date(1984,1,2); // approximate 갑자 day reference
+  const cur=new Date(y,m-1,d);
+  const days=Math.floor((cur-ref)/86400000);
+  const dayIdx=((days%60)+60)%60;
+  const dayStem=G[dayIdx%10], dayBranch=Z[dayIdx%12];
+  const yearIdx=((y-1984)%60+60)%60;
+  const ys=G[yearIdx%10], yb=Z[yearIdx%12];
+  const monthBranch=Z[((m+1)%12)+0]; // fallback only
+  const monthStem=G[(stemIndex(ys)*2 + m + 1)%10];
+  const hourBranch=Z[Math.floor(((h+1)%24)/2)%12];
+  const hourStem=G[(stemIndex(dayStem)*2 + Math.floor(h/2))%10];
+  return {year:ys+yb,month:monthStem+monthBranch,day:dayStem+dayBranch,hour:hourStem+hourBranch,
+    luckPillars:{forward:true,startAge:3,startYears:3,startMonths:0,startDays:0,
+      pillars:Array.from({length:8},(_,i)=>({age:3+i*10,korean:ganzhiAt(monthStem,monthBranch,i+1)}))}};
+}
+
 const EG={갑:"목",을:"목",병:"화",정:"화",무:"토",기:"토",경:"금",신:"금",임:"수",계:"수"};
 const EZ={자:"수",축:"토",인:"목",묘:"목",진:"토",사:"화",오:"화",미:"토",신:"금",유:"금",술:"토",해:"수"};
 const data={
@@ -272,18 +290,17 @@ function make(){
  const unk=document.getElementById("unknown").checked;
  const h=unk?12:+document.getElementById("hour").value||0;
  const m=unk?0:+document.getElementById("min").value||0;
- if(!unk&&(h>23||m>59))throw Error("출생시간을 정확히 입력해주세요.");
+ if(!unk&&(h>23||m>59))throw Error("출생시간을 정확하게 입력해주세요.");
  const lon=+document.getElementById("region").value;
  const sex=document.getElementById("sex").value;
- const s=calculateFourPillars({
-   year:d.y,month:d.m,day:d.d,hour:h,minute:m,
-   gender:sex,
+ const raw=calculateFourPillars ? calculateFourPillars({
+   year:d.y,month:d.m,day:d.d,hour:h,minute:m,gender:sex,
    trueSolarTime:{longitude:lon,applyEquationOfTime:true,applyHistoricalDst:true},
    dayBoundary:"midnight"
- });
- return {d,chars:chars(s),unk,raw:s,regionLon:lon,sex};
+ }) : fallbackFourPillars(d.y,d.m,d.d,h,m);
+ return {d,chars:chars(raw),unk,raw,regionLon:lon,sex};
 }
-
+function relationText(a,b){return relation(a,b)||"특별한 주요 관계 없음"}
 function elementScore(c){
  const out={목:0,화:0,토:0,금:0,수:0};
  c.forEach(p=>{if(!p)return; const s=EG[p[0]],b=EZ[p[1]]; if(s)out[s]++; if(b)out[b]++;});
@@ -338,8 +355,8 @@ function report(a){
  const currentD=daeun?.pillars?.[Math.max(0,currentNo-1)];
  const strength=strengthRead(day[0],elementScore(c));
  const love=loveCore(day[0],day[1],sex);
- const flow=flowRead(day[1],currentD,yg);
  const yg=yearGanzhi(2026), yRel=relationText(day[1],yg[1]);
+ const flow=flowRead(day[1],currentD,yg);
  const dayHidden=hiddenStems(day[1]).join("·")||"없음";
  const spouseGod=dayHidden==="없음"?"보조 해석 없음":dayHidden.split("·").map(s=>`${s}(${tenGod(day[0],s)})`).join(" · ");
  const ygGod=tenGod(day[0],yg[0]);
@@ -361,47 +378,40 @@ function report(a){
  keywords:`${master} · ${ji} · ${e.목}목 / ${e.화}화 / ${e.토}토 / ${e.금}금 / ${e.수}수`,
  one:score>=85?"올해는 마음이 움직였다면 한 번쯤 먼저 표현해봐도 좋아요.":score>=76?"천천히 가까워지는 인연이 오히려 오래갈 수 있어요.":"올해의 키워드는 '서두르지 않기'. 좋은 인연은 편안함에서 시작될 수 있어요."};
 }
-document.getElementById("go").addEventListener("click",()=>{
+document.getElementById("go").addEventListener("click",async()=>{
  const err=document.getElementById("error"),load=document.getElementById("loading");
- try{err.style.display="none";load.style.display="block";const r=report(make());
- document.getElementById("score").textContent=r.score;document.getElementById("day").textContent=r.day||"—";document.getElementById("dayMeta").textContent=`${r.day[0]||"—"} · 일간 / ${r.day[1]||"—"} · 일지`;
- document.getElementById("summary").textContent=r.summary;
- document.getElementById("pillars").innerHTML=r.chars.map((x,i)=>`<div class="pillar"><b>${x||"—"}</b><small>${["년주","월주","일주","시주"][i]}${i===3&&r.unk?" · 미입력":""}</small></div>`).join("");
- document.getElementById("elements").innerHTML=["목","화","토","금","수"].map(x=>`<div class="el"><b>${x}</b><span>${r.e[x]}개</span></div>`).join("");
- document.getElementById("elementText").textContent=r.elementText;
- document.getElementById("style").textContent=r.t.style;document.getElementById("styleEv").textContent=r.styleEv;document.getElementById("spouse").textContent=r.spouse;document.getElementById("spouseEv").textContent=r.spouseEv;
- document.getElementById("charm").textContent=r.t.charm;document.getElementById("type").textContent=r.t.type;document.getElementById("pattern").textContent=r.t.pattern;document.getElementById("need").textContent=r.t.need;
- document.getElementById("meeting").textContent=r.meeting;document.getElementById("flower").textContent=r.flower;document.getElementById("year").textContent=r.year;document.getElementById("months").innerHTML=r.mh;document.getElementById("timing").textContent=r.timing;
- document.getElementById("daeunTitle").textContent=`현재 대운 · ${r.currentD?.korean||"계산 결과 확인"}`;
- document.getElementById("daeunText").textContent=r.daeunText;document.getElementById("daeunEv").textContent=r.daeunEv;document.getElementById("daeuns").innerHTML=r.daeunCards;
- document.getElementById("strengthText").textContent=r.strength.text;document.getElementById("strengthEv").textContent=r.strength.ev;
- document.getElementById("loveCoreText").textContent=r.love.text;document.getElementById("loveCoreEv").textContent=r.love.ev;
- document.getElementById("flowText").textContent=r.flow.text;document.getElementById("flowEv").textContent=r.flow.ev;
- document.getElementById("sewoonText").textContent=r.sewoonText;document.getElementById("sewoonEv").textContent=r.sewoonEv;document.getElementById("woluns").innerHTML=r.wolunCards;document.getElementById("wolunText").textContent=r.wolunText;document.getElementById("caution").textContent=r.caution;document.getElementById("keywords").textContent=r.keywords;document.getElementById("one").textContent=r.one;
- document.getElementById("result").classList.add("show");document.getElementById("result").scrollIntoView({behavior:"smooth"});
- }catch(e){err.textContent=e.message||"입력을 확인해주세요.";err.style.display="block"}finally{load.style.display="none"}
+ try{
+   err.style.display="none";load.style.display="block";
+   if(!calculateFourPillars){
+     try{
+       const mod=await import("https://cdn.jsdelivr.net/npm/manseryeok@2.0.0/+esm");
+       calculateFourPillars=mod.calculateFourPillars;
+     }catch(_){ /* offline/CDN failure: use fallback */ }
+   }
+   const r=report(make());
+   document.getElementById("score").textContent=r.score;
+   document.getElementById("day").textContent=r.day||"—";
+   document.getElementById("dayMeta").textContent=`${r.day[0]||"—"} · 일간 / ${r.day[1]||"—"} · 일지`;
+   document.getElementById("summary").textContent=r.summary;
+   document.getElementById("pillars").innerHTML=r.chars.map((x,i)=>`<div class="pillar"><b>${x||"—"}</b><small>${["년주","월주","일주","시주"][i]}${i===3&&r.unk?" · 미입력":""}</small></div>`).join("");
+   document.getElementById("elements").innerHTML=["목","화","토","금","수"].map(x=>`<div class="el"><b>${x}</b><span>${r.e[x]}개</span></div>`).join("");
+   document.getElementById("elementText").textContent=r.elementText;
+   document.getElementById("style").textContent=r.t.style;document.getElementById("styleEv").textContent=r.styleEv;document.getElementById("spouse").textContent=r.spouse;document.getElementById("spouseEv").textContent=r.spouseEv;
+   document.getElementById("charm").textContent=r.t.charm;document.getElementById("type").textContent=r.t.type;document.getElementById("pattern").textContent=r.t.pattern;document.getElementById("need").textContent=r.t.need;
+   document.getElementById("meeting").textContent=r.meeting;document.getElementById("flower").textContent=r.flower;document.getElementById("year").textContent=r.year;document.getElementById("months").innerHTML=r.mh;document.getElementById("timing").textContent=r.timing;
+   document.getElementById("daeunTitle").textContent=`현재 대운 · ${r.currentD?.korean||"계산 결과 확인"}`;
+   document.getElementById("daeunText").textContent=r.daeunText;document.getElementById("daeunEv").textContent=r.daeunEv;document.getElementById("daeuns").innerHTML=r.daeunCards;
+   document.getElementById("strengthText").textContent=r.strength.text;document.getElementById("strengthEv").textContent=r.strength.ev;
+   document.getElementById("loveCoreText").textContent=r.love.text;document.getElementById("loveCoreEv").textContent=r.love.ev;
+   document.getElementById("flowText").textContent=r.flow.text;document.getElementById("flowEv").textContent=r.flow.ev;
+   document.getElementById("sewoonText").textContent=r.sewoonText;document.getElementById("sewoonEv").textContent=r.sewoonEv;document.getElementById("woluns").innerHTML=r.wolunCards;document.getElementById("wolunText").textContent=r.wolunText;document.getElementById("caution").textContent=r.caution;document.getElementById("keywords").textContent=r.keywords;document.getElementById("one").textContent=r.one;
+   document.getElementById("result").classList.add("show");document.getElementById("result").scrollIntoView({behavior:"smooth"});
+ }catch(e){console.error(e);err.textContent=e.message||"입력을 확인해주세요.";err.style.display="block"}finally{load.style.display="none"}
 });
 document.getElementById("reset").addEventListener("click",()=>location.reload());
 </script>
 
-<script>
-document.addEventListener("DOMContentLoaded", function(){
-  const btn = document.getElementById("startBtn") || document.querySelector("button.primary");
-  if(btn){
-    btn.onclick = function(e){ e.preventDefault(); goResult(); };
-  }
-  const back = document.getElementById("backBtn");
-  if(back){
-    back.onclick = function(){
-      const input=document.getElementById("inputScreen");
-      const result=document.getElementById("resultScreen");
-      if(input) input.style.display="block";
-      if(result) result.style.display="none";
-      window.scrollTo({top:0,behavior:"smooth"});
-    };
-  }
-});
-</script>
+
 
 </body>
 </html>
