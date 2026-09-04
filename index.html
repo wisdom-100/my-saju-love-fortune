@@ -31,7 +31,7 @@ button{width:100%;border:0;border-radius:16px;background:#302c32;color:#fff;padd
 <body>
 <div class="wrap">
 <section class="hero">
-<div class="tag">💗 MY SAJU · LOVE REPORT</div>
+<div class="tag">💎 MY SAJU · LOVE REPORT</div>
 <h1>내 사주<br>연애설명서 PRO</h1>
 <p>일간 하나만 보는 간단한 운세가 아니라<br><b>사주 원국 · 오행 · 일주 · 배우자궁 · 올해 흐름</b>을 함께 살펴봐요.</p>
 </section>
@@ -52,7 +52,7 @@ button{width:100%;border:0;border-radius:16px;background:#302c32;color:#fff;padd
 </div>
 <div class="unknown"><input id="unknown" type="checkbox"> 출생시간을 몰라요</div>
 <div class="hint">예: 오후 2시 30분 → 14 / 30</div>
-<div class="error" id="error"></div>
+<div id="error" style="display:none"></div>
 <button id="go">내 연애 리포트 보기 💌</button>
 <div class="loading" id="loading">사주 원국을 계산하고 있어요…</div>
 </section>
@@ -298,7 +298,7 @@ function make(){
    trueSolarTime:{longitude:lon,applyEquationOfTime:true,applyHistoricalDst:true},
    dayBoundary:"midnight"
  }) : fallbackFourPillars(d.y,d.m,d.d,h,m);
- return {d,chars:chars(raw),unk,raw,regionLon:lon,sex};
+ const safeChars = (typeof chars==="function" ? chars(raw) : [raw?.year,raw?.month,raw?.day,raw?.hour]).map(x=>x||"—"); return {d,chars:safeChars,unk,raw,regionLon:lon,sex};
 }
 function relationText(a,b){return relation(a,b)||"특별한 주요 관계 없음"}
 function elementScore(c){
@@ -393,8 +393,8 @@ document.getElementById("go").addEventListener("click",async()=>{
    document.getElementById("day").textContent=r.day||"—";
    document.getElementById("dayMeta").textContent=`${r.day[0]||"—"} · 일간 / ${r.day[1]||"—"} · 일지`;
    document.getElementById("summary").textContent=r.summary;
-   document.getElementById("pillars").innerHTML=r.chars.map((x,i)=>`<div class="pillar"><b>${x||"—"}</b><small>${["년주","월주","일주","시주"][i]}${i===3&&r.unk?" · 미입력":""}</small></div>`).join("");
-   document.getElementById("elements").innerHTML=["목","화","토","금","수"].map(x=>`<div class="el"><b>${x}</b><span>${r.e[x]}개</span></div>`).join("");
+   document.getElementById("pillars").innerHTML=(Array.isArray(r.chars)?r.chars:[]).map((x,i)=>`<div class="pillar"><b>${x||"—"}</b><small>${["년주","월주","일주","시주"][i]}${i===3&&r.unk?" · 미입력":""}</small></div>`).join("");
+   const ev=r.e||{}; document.getElementById("elements").innerHTML=["목","화","토","금","수"].map(x=>`<div class="el"><b>${x}</b><span>${ev[x]||0}개</span></div>`).join("");
    document.getElementById("elementText").textContent=r.elementText;
    document.getElementById("style").textContent=r.t.style;document.getElementById("styleEv").textContent=r.styleEv;document.getElementById("spouse").textContent=r.spouse;document.getElementById("spouseEv").textContent=r.spouseEv;
    document.getElementById("charm").textContent=r.t.charm;document.getElementById("type").textContent=r.t.type;document.getElementById("pattern").textContent=r.t.pattern;document.getElementById("need").textContent=r.t.need;
