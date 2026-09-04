@@ -249,6 +249,23 @@ function monthGanzhi2026(m){
  return stems[m-1]+branches[m-1];
 }
 
+
+function goResult(){
+  try{
+    const a=make();
+    const r=report(a);
+    const input=document.getElementById("inputScreen");
+    const result=document.getElementById("resultScreen");
+    if(input) input.style.display="none";
+    if(result) result.style.display="block";
+    if(typeof renderResult==="function") renderResult(r);
+    window.scrollTo({top:0,behavior:"smooth"});
+  }catch(err){
+    console.error(err);
+    alert(err && err.message ? err.message : "입력값을 확인해주세요.");
+  }
+}
+
 function make(){
  const d=parse(document.getElementById("date").value);
  if(!d)throw Error("생년월일을 1990.03.21 형식으로 입력해주세요.");
@@ -366,5 +383,25 @@ document.getElementById("go").addEventListener("click",()=>{
 });
 document.getElementById("reset").addEventListener("click",()=>location.reload());
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  const btn = document.getElementById("startBtn") || document.querySelector("button.primary");
+  if(btn){
+    btn.onclick = function(e){ e.preventDefault(); goResult(); };
+  }
+  const back = document.getElementById("backBtn");
+  if(back){
+    back.onclick = function(){
+      const input=document.getElementById("inputScreen");
+      const result=document.getElementById("resultScreen");
+      if(input) input.style.display="block";
+      if(result) result.style.display="none";
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+  }
+});
+</script>
+
 </body>
 </html>
