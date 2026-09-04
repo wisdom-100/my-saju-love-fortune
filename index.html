@@ -73,7 +73,20 @@ function monthPillar(y,m,d,h=12,min=0){const term=majorTermForDate(y,m,d,h,min);
 function monthPillarFor2026(m){return monthPillar(2026,m,15);}
 
 function tenGod(dayStem,stem){const di=STEMS.indexOf(dayStem),si=STEMS.indexOf(stem), same=(di%2)===(si%2), rel=(E[stem]===E[dayStem])?"비겁":({"목화":"식상","목토":"재성","목금":"관성","목수":"인성","화목":"인성","화토":"식상","화금":"재성","화수":"관성","토목":"관성","토화":"인성","토금":"식상","토수":"재성","금목":"재성","금화":"관성","금토":"인성","금수":"식상","수목":"식상","수화":"재성","수토":"관성","수금":"인성"}[E[dayStem]+E[stem]]||"비겁");if(rel==="비겁")return same?"비견":"겁재";const map={식상:["식신","상관"],재성:["정재","편재"],관성:["정관","편관"],인성:["정인","편인"]};return map[rel][same?0:1];}
-function elementCounts(pillars){const c={목:0,화:0,토:0,금:0,수:0};for(const p of pillars){c[E[p.stem]]++;for(const s of HIDDEN[p.branch])c[E[s]]+=0.35;}return c;}
+function elementCounts(pillars){
+  // 오행 분포는 네 기둥 전체를 대상으로 계산한다.
+  // 천간은 각 1점, 지지는 본기 1점, 지장간은 실제 포함 비중을 반영해 0.5/0.3/0.2로 가중한다.
+  const c={목:0,화:0,토:0,금:0,수:0};
+  const hiddenWeight={자:[1],축:[0.5,0.3,0.2],인:[1/3,1/3,1/3],묘:[1],진:[0.5,0.3,0.2],사:[0.5,0.3,0.2],오:[0.5,0.5],미:[0.5,0.3,0.2],신:[0.5,0.3,0.2],유:[1],술:[0.5,0.3,0.2],해:[0.7,0.3]};
+  for(const p of pillars){
+    c[E[p.stem]]+=1;
+    c[BE[p.branch]]+=1;
+    const hs=HIDDEN[p.branch]||[];
+    const ws=hiddenWeight[p.branch]||hs.map(()=>1/Math.max(hs.length,1));
+    hs.forEach((st,i)=>{c[E[st]]+=0.5*ws[i];});
+  }
+  return c;
+}
 function branchRelations(bs){const rel=[];const has=x=>bs.includes(x);if(has("자")&&has("축"))rel.push("자축합");if(has("인")&&has("해"))rel.push("인해합");if(has("묘")&&has("술"))rel.push("묘술합");if(has("진")&&has("유"))rel.push("진유합");if(has("사")&&has("신"))rel.push("사신합");if(has("오")&&has("미"))rel.push("오미합");if(has("子")&&has("午"))rel.push("자오충");const pairs=[["자","오","자오충"],["축","미","축미충"],["인","신","인신충"],["묘","유","묘유충"],["진","술","진술충"],["사","해","사해충"]];for(const [a,b,n] of pairs)if(has(a)&&has(b))rel.push(n);if(bs.filter(x=>x==="미").length>=2)rel.push("미미 중첩");return[...new Set(rel)];}
 
 function monthScore(natal,mp,year){let score=68;const ne=elementCounts(natal), me=E[mp.stem], mb=BE[mp.branch];const desired={목:"수",화:"목",토:"화",금:"土",수:"금"};if(ne[me]<2)score+=5;if(me===E[natal[2].stem])score+=4;if(["인","묘","진"].includes(mp.branch)&&["인","묘","진"].includes(natal[2].branch))score+=6;if(["사","오","미"].includes(mp.branch)&&["사","오","미"].includes(natal[2].branch))score+=5;if(["신","유","술"].includes(mp.branch)&&["신","유","술"].includes(natal[2].branch))score+=5;if(["해","자","축"].includes(mp.branch)&&["해","자","축"].includes(natal[2].branch))score+=4;const rel=branchRelations(natal.map(p=>p.branch).concat(mp.branch));if(rel.some(x=>x.includes("합")))score+=7;if(rel.some(x=>x.includes("충")))score-=5;if(mp.stem===year.stem||mp.branch===year.branch)score+=2;return Math.max(45,Math.min(96,Math.round(score)));}
@@ -102,10 +115,10 @@ function makeReport(){
  <div class="section"><h3>🧭 사주 전체 명식</h3><div class="pillargrid">${pillarHtml(yp,"년주","환경·뿌리")}${pillarHtml(mp,"월주","성장·사회")}${pillarHtml(dp,"일주","나·배우자궁")}${hp?pillarHtml(hp,"시주","미래·후반"):`<div class="pillar"><b>—</b><strong>시주</strong><small>출생시간 미상</small></div>`}</div><p>이 리포트는 일주 하나만 떼어 해석하지 않고 네 기둥의 역할을 나눠 본 뒤 서로 겹치는 부분을 연애 흐름으로 연결해요.</p></div>
  <div class="section"><h3>🌷 전체적인 연애 성향</h3><p>${intro}</p><p>${yearRead}</p><p>${monthRead}</p><p>${spouseRead}</p><p>${hourRead}</p></div>
  <div class="section"><h3>💗 사랑이 깊어질 때</h3><p>처음에는 상대의 말투나 분위기에서 호감을 느끼더라도, 실제로는 <b>일관성·약속·생활 리듬</b>을 확인하면서 마음이 깊어지는 타입으로 읽을 수 있어요. 그래서 연락 빈도만으로 상대의 마음을 단정하기보다, 약속을 지키는지와 관계를 꾸준히 이어가려는지를 보는 것이 더 중요해요.</p><p>반대로 상대가 애매한 태도를 오래 보이거나 말과 행동이 자주 달라지면 마음이 빠르게 피곤해질 수 있어요. 좋아하는 마음이 있어도 관계의 기준을 낮추지 않는 것이 오히려 장기적으로 더 잘 맞아요.</p></div>
- <div class="section"><h3>🌿 오행 흐름</h3><p>원국의 오행 분포를 단순 수치화하면 다음과 같아요. 숫자는 해석을 위한 보조 지표이며, 실제 명리 판단에서는 계절·강약·십신·지장간 등을 함께 봐야 해요.</p><div class="elementrow">${elemHtml}</div></div>
+ <div class="section"><h3>🌿 오행 흐름</h3><p>년주·월주·일주·시주의 천간과 지지, 그리고 지장간까지 모두 반영해 오행 비중을 계산해요. 천간과 지지의 본기는 기본값으로, 지장간은 포함 비중을 낮춰 가중합니다. 퍼센트는 원국의 구조를 보기 위한 보조 지표이며 계절·강약·십신·합충까지 함께 봐야 해요.</p><div class="elementrow">${elemHtml}</div></div>
  <div class="section"><h3>🔗 관계에서 반복될 수 있는 패턴</h3><p>${rel.length?`원국의 지지 사이에서 <b>${rel.join(" · ")}</b> 같은 관계가 보여요. 이런 구조는 사람을 만나는 방식에서 끌림과 긴장감이 함께 나타날 수 있다는 식으로 해석할 수 있어요.`:"현재 네 기둥에서 눈에 띄는 대표적인 지지 합·충은 많지 않아요. 그래서 특정한 한 가지 관계 패턴보다 전체 원국의 균형을 중심으로 보는 편이 자연스러워요."}</p><p>결국 중요한 건 강한 끌림 자체보다, 서로의 생활 리듬이 맞고 상대가 행동으로 신뢰를 보여주는지예요.</p></div></div>
  <div class="card"><h2>📅 2026년 연애 흐름</h2><div class="section"><h3>가장 강한 달 · ${best.name} 💗</h3><p>${best.detail}</p><span class="tag">2026 BEST ${best.name} · ${best.p.stem}${best.p.branch}</span></div><div class="monthgrid">${monthHtml}</div><div class="section"><h3>🚀 좋은 흐름을 실제 기회로 만드는 방법</h3><p>${action}</p><p>특히 BEST 달에는 ‘언젠가 만나겠지’보다 구체적인 행동이 중요해요. 약속을 잡고, 먼저 답장을 보내고, 관심이 있는 사람에게 한 단계 더 분명한 신호를 보내는 식으로 흐름을 현실의 사건으로 연결해보세요.</p></div></div>
- <div class="card"><h2>🔎 2026년 풀이를 읽는 기준</h2><div class="section"><h3>정확한 월주·월별 흐름</h3><p>월주는 단순히 1월·2월처럼 달력의 월을 잘라 넣지 않고, <b>24절기의 실제 태양 위치를 기준으로 절기 경계</b>를 계산해 결정해요. 그래서 같은 생일을 입력하면 월주는 매번 바뀌지 않고 같은 결과가 나옵니다.</p><p>2026년 월별 점수도 무작위 값이 아니라 네 기둥과 2026년 병오년, 각 절기 월의 천간·지지 관계를 같은 규칙으로 계산해요. 따라서 새로고침할 때마다 BEST 달이 바뀌지 않아요.</p></div><p class="notice">※ 전통 명리학을 바탕으로 한 오락·참고용 콘텐츠입니다. 만세력 계산은 한국 표준시(KST)와 절기 경계를 기준으로 하며, 출생시간이 없으면 시주는 계산하지 않습니다. 실제 미래의 만남이나 연애 결과를 보장하지 않습니다.</p><button class="back" id="again">다시 입력하기</button></div>`;
+ <div class="card"><p class="notice">※ 전통 명리학을 바탕으로 한 오락·참고용 콘텐츠입니다. 만세력 계산은 한국 표준시(KST)와 절기 경계를 기준으로 하며, 출생시간이 없으면 시주는 계산하지 않습니다. 실제 미래의 만남이나 연애 결과를 보장하지 않습니다.</p><button class="back" id="again">다시 입력하기</button></div>`;
  report.style.display="block";document.getElementById("formCard").style.display="none";window.scrollTo({top:0,behavior:"smooth"});document.getElementById("again").addEventListener("click",()=>{report.style.display="none";document.getElementById("formCard").style.display="block";window.scrollTo({top:0,behavior:"smooth"});});
 }
 document.getElementById("unknownTime").addEventListener("change",e=>{document.getElementById("hour").disabled=e.target.checked;document.getElementById("minute").disabled=e.target.checked;});
