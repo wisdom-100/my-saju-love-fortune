@@ -46,14 +46,14 @@
   .notice{font-size:13px!important;color:#aaa2aa!important;background:#faf7f6;padding:14px;border-radius:16px}
   .back{background:#fff;color:#5d5860;border:2px solid var(--line);margin-top:18px}
   @media(max-width:620px){
-    .wrap{padding:22px 14px 55px}
+    .wrap{padding:18px 14px 48px}
     .card{padding:22px;border-radius:28px}
     /* 예전 버전과 동일한 모바일 비율 */
     .grid2{grid-template-columns:1fr 1fr;gap:18px}
     .monthgrid{grid-template-columns:repeat(2,1fr)}
 
     /* 예전 버전의 체감 글자 크기로 통일 */
-    .brand{font-size:14px;padding:9px 14px;margin-bottom:28px}
+    .brand{font-size:14px;padding:9px 14px;margin-bottom:34px}
     h1{font-size:32px;line-height:1.17;letter-spacing:-2px;margin:0 0 10px}
     .lead{font-size:14px;line-height:1.7;margin-bottom:24px}
     h2{font-size:22px}
@@ -85,14 +85,14 @@
     <div class="grid2">
       <div class="field">
         <label for="birth">생년월일</label>
-        <input id="birth" type="text" inputmode="numeric" maxlength="10" placeholder="1997.07.12" value="1997.07.12">
-        <div class="hint">예: 1997.07.12</div>
+        <input id="birth" type="text" inputmode="numeric" maxlength="10" placeholder="2001.03.24" value="2001.03.24">
+        <div class="hint">예: 2001.03.24</div>
       </div>
       <div class="field">
         <label for="sex">성별</label>
         <select id="sex">
-          <option value="female" selected>여성</option>
-          <option value="male">남성</option>
+          <option value="female">여성</option>
+          <option value="male" selected>남성</option>
           <option value="other">기타</option>
         </select>
       </div>
@@ -101,7 +101,7 @@
     <div class="field">
       <label for="region">출생지역</label>
       <select id="region">
-        <option>서울</option><option selected>부산</option><option>대구</option><option>인천</option>
+        <option selected>서울</option><option>부산</option><option>대구</option><option>인천</option>
         <option>광주</option><option>대전</option><option>울산</option><option>세종</option>
         <option>경기</option><option>강원</option><option>충북</option><option>충남</option>
         <option>전북</option><option>전남</option><option>경북</option><option>경남</option><option>제주</option>
@@ -111,11 +111,11 @@
     <div class="grid2">
       <div class="field">
         <label for="hour">출생시간</label>
-        <input id="hour" type="number" min="0" max="23" value="14" placeholder="14">
+        <input id="hour" type="number" min="0" max="23" value="10" placeholder="10">
       </div>
       <div class="field">
         <label for="minute">분</label>
-        <input id="minute" type="number" min="0" max="59" value="30" placeholder="30">
+        <input id="minute" type="number" min="0" max="59" value="20" placeholder="20">
       </div>
     </div>
 
@@ -132,7 +132,7 @@
 
 /* 업데이트 때마다 브랜드 하트가 조금씩 바뀌도록 구성 */
 const HEARTS = ["💗","💖","💕","💓","💞","💘","💝","❤️","🩷","💟"];
-const VERSION_HEART = HEARTS[8];
+const VERSION_HEART = HEARTS[9];
 document.getElementById("brandHeart").textContent = VERSION_HEART;
 
 /* 중요: months는 DOM/전역 객체와 충돌하지 않도록 MONTHS라는 상수 배열로 고정 */
@@ -156,29 +156,59 @@ function parseDate(v){
   return {y,m,d};
 }
 
-/* 자정 기준의 단순 일주 계산. 실제 정밀 만세력과는 차이가 있을 수 있으며 재미용 리포트입니다. */
+/* 만세력 계산: 입춘 기준 연주 + 절기 기준 월주 + 율리우스일 기반 일주 + 출생시간 시주 */
+function jdn(y,m,d){
+  const a=Math.floor((14-m)/12);
+  const yy=y+4800-a, mm=m+12*a-3;
+  return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;
+}
+
+function yearPillar(y,m,d){
+  // 사주에서 연주는 입춘을 기준으로 전환한다. 경계일의 시각까지 모르는 경우 안전하게 날짜 기준으로 처리.
+  const beforeIpchun=(m<2)||(m===2&&d<4);
+  const by=beforeIpchun?y-1:y;
+  const idx=((by-4)%60+60)%60;
+  return {stem:STEMS[idx%10],branch:BRANCHES[idx%12],idx};
+}
+
+// 절기 월의 실무용 날짜 경계. 7월 12일처럼 경계에서 멀리 떨어진 날짜는 정확히 해당 월로 분류된다.
+const SOLAR_MONTH_START=[
+  [1,6],[2,4],[3,6],[4,5],[5,6],[6,6],
+  [7,7],[8,8],[9,8],[10,8],[11,7],[12,7]
+];
+
+function solarMonthIndex(y,m,d){
+  let idx=m-1;
+  const start=SOLAR_MONTH_START[m-1][1];
+  if(d<start) idx=(idx+11)%12;
+  // 사주 월지: 寅(2월 절기)부터 시작
+  return (idx+11)%12;
+}
+
+function monthPillar(y,m,d){
+  const yp=yearPillar(y,m,d);
+  const mi=solarMonthIndex(y,m,d); // 0=寅, 11=丑
+  const yearStemIndex=STEMS.indexOf(yp.stem);
+  // 甲/己년 寅월 丙, 乙/庚 丁, 丙/辛 戊, 丁/壬 己, 戊/癸 庚
+  const firstStem={0:2,5:2,1:3,6:3,2:4,7:4,3:5,8:5,4:6,9:6}[yearStemIndex];
+  const stem=(firstStem+mi)%10;
+  const branch=(2+mi)%12;
+  return {stem:STEMS[stem],branch:BRANCHES[branch],idx:(stem+branch)%60};
+}
+
 function dayPillar(y,m,d){
-  const utc=Date.UTC(y,m-1,d);
-  const base=Date.UTC(2000,0,7); // 경진일 기준점
-  const diff=Math.floor((utc-base)/86400000);
-  const idx=((6+diff)%60+60)%60;
-  return {stem:STEMS[idx%10], branch:BRANCHES[idx%12], idx};
-}
-function yearPillar(y){
-  const idx=((y-4)%60+60)%60;
+  // 2000-01-07 = 甲子일(JDN 2451551)을 기준으로 계산
+  const idx=((jdn(y,m,d)-2451551)%60+60)%60;
   return {stem:STEMS[idx%10],branch:BRANCHES[idx%12],idx};
 }
-function monthPillar(y,m){
-  const yearStem=(yearPillar(y).stem);
-  const startIndex={갑:2,기:2,을:4,경:4,병:6,신:6,정:8,임:8,무:0,계:0}[yearStem];
-  const idx=(startIndex+(m-1))%60;
-  return {stem:STEMS[idx%10],branch:BRANCHES[idx%12],idx};
-}
-function hourPillar(hour, dayStem){
-  const branchIndex=Math.floor(((hour+1)%24)/2);
+
+function hourPillar(hour, minute, dayStem){
+  // 자시 23:00~00:59, 이후 2시간 단위
+  const total=hour*60+minute;
+  const branchIndex=Math.floor(((total+60)%1440)/120);
   const start={갑:0,기:0,을:2,경:2,병:4,신:4,정:6,임:6,무:8,계:8}[dayStem];
-  const idx=(start+branchIndex)%10;
-  return {stem:STEMS[idx],branch:BRANCHES[branchIndex],idx};
+  const stem=(start+branchIndex)%10;
+  return {stem:STEMS[stem],branch:BRANCHES[branchIndex],idx:stem};
 }
 
 function compatibilityScore(dp){
@@ -196,12 +226,12 @@ function makeReport(){
   const hour=Number(document.getElementById("hour").value);
   const minute=Number(document.getElementById("minute").value);
 
-  if(!date) throw new Error("생년월일을 8자리 숫자 또는 1997.07.12 형식으로 입력해주세요.");
+  if(!date) throw new Error("생년월일을 8자리 숫자 또는 2001.03.24 형식으로 입력해주세요.");
   if(!unknown && (!Number.isInteger(hour)||hour<0||hour>23||!Number.isInteger(minute)||minute<0||minute>59))
     throw new Error("출생시간은 0~23시, 분은 0~59분으로 입력해주세요.");
 
-  const yp=yearPillar(date.y), mp=monthPillar(date.y,date.m), dp=dayPillar(date.y,date.m,date.d);
-  const hp=unknown ? null : hourPillar(hour,dp.stem);
+  const yp=yearPillar(date.y,date.m,date.d), mp=monthPillar(date.y,date.m,date.d), dp=dayPillar(date.y,date.m,date.d);
+  const hp=unknown ? null : hourPillar(hour,minute,dp.stem);
   const score=compatibilityScore(dp);
 
   /* 월별 흐름: 고정된 배열을 map하므로 months.map 오류가 발생하지 않음 */
@@ -284,7 +314,7 @@ function makeReport(){
         <p>년주 ${yp.stem}${yp.branch} · 월주 ${mp.stem}${mp.branch} · 일주 ${dp.stem}${dp.branch}${hp?` · 시주 ${hp.stem}${hp.branch}`:" · 시주는 미상"}<br><br>
         이번 리포트에서는 일간의 기본 성향에 일지를 함께 반영해 연애에서의 거리감, 생활 리듬, 관계가 편해지는 방식까지 조금 더 구체적으로 풀었습니다.</p>
       </div>
-      <p class="notice">※ 재미를 위한 콘텐츠입니다. 사주 원국·오행·일주·일지와 2026년 흐름을 참고해 간단하게 해석하며, 실제 미래의 만남이나 연애 결과를 보장하지 않습니다. 출생지역은 일반적인 지역 입력 방식으로 사용합니다.</p>
+      <p class="notice">※ 재미를 위한 콘텐츠입니다. 사주 원국·오행·일주·일지와 2026년 흐름을 참고해 간단하게 해석하며, 실제 미래의 만남이나 연애 결과를 보장하지 않습니다. 출생지역은 입력값으로 받고, 기본 만세력은 한국 표준시와 절기 기준으로 계산합니다.</p>
       <button class="back" id="again">다시 입력하기</button>
     </div>
   `;
