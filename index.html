@@ -189,8 +189,8 @@ function monthPillar(y,m,d){
   const yp=yearPillar(y,m,d);
   const mi=solarMonthIndex(y,m,d); // 0=寅, 11=丑
   const yearStemIndex=STEMS.indexOf(yp.stem);
-  // 甲/己년 寅월 丙, 乙/庚 丁, 丙/辛 戊, 丁/壬 己, 戊/癸 庚
-  const firstStem={0:2,5:2,1:3,6:3,2:4,7:4,3:5,8:5,4:6,9:6}[yearStemIndex];
+  // 甲/己년 寅월 丙, 乙/庚 戊, 丙/辛 庚, 丁/壬 壬, 戊/癸 甲
+  const firstStem={0:2,5:2,1:4,6:4,2:6,7:6,3:8,8:8,4:0,9:0}[yearStemIndex];
   const stem=(firstStem+mi)%10;
   const branch=(2+mi)%12;
   return {stem:STEMS[stem],branch:BRANCHES[branch],idx:(stem+branch)%60};
