@@ -85,7 +85,7 @@
     <div class="grid2">
       <div class="field">
         <label for="birth">생년월일</label>
-        <input id="birth" type="text" inputmode="numeric" maxlength="10" placeholder="2001.03.24" value="2001.03.24">
+        <input id="birth" type="text" inputmode="numeric" maxlength="10" placeholder="2001.03.24" value="">
         <div class="hint">예: 2001.03.24</div>
       </div>
       <div class="field">
@@ -111,11 +111,11 @@
     <div class="grid2">
       <div class="field">
         <label for="hour">출생시간</label>
-        <input id="hour" type="number" min="0" max="23" value="10" placeholder="10">
+        <input id="hour" type="number" min="0" max="23" value="" placeholder="10">
       </div>
       <div class="field">
         <label for="minute">분</label>
-        <input id="minute" type="number" min="0" max="59" value="20" placeholder="20">
+        <input id="minute" type="number" min="0" max="59" value="" placeholder="20">
       </div>
     </div>
 
@@ -308,13 +308,6 @@ function makeReport(){
     </div>
 
     <div class="card">
-      <h2>🔎 풀이 한눈에 보기</h2>
-      <div class="section">
-        <h3>원국에서 보는 연애 포인트</h3>
-        <p>년주 ${yp.stem}${yp.branch} · 월주 ${mp.stem}${mp.branch} · 일주 ${dp.stem}${dp.branch}${hp?` · 시주 ${hp.stem}${hp.branch}`:" · 시주는 미상"}<br><br>
-        이번 리포트에서는 일간의 기본 성향에 일지를 함께 반영해 연애에서의 거리감, 생활 리듬, 관계가 편해지는 방식까지 조금 더 구체적으로 풀었습니다.</p>
-      </div>
-      <p class="notice">※ 재미를 위한 콘텐츠입니다. 사주 원국·오행·일주·일지와 2026년 흐름을 참고해 간단하게 해석하며, 실제 미래의 만남이나 연애 결과를 보장하지 않습니다. 출생지역은 입력값으로 받고, 기본 만세력은 한국 표준시와 절기 기준으로 계산합니다.</p>
       <button class="back" id="again">다시 입력하기</button>
     </div>
   `;
